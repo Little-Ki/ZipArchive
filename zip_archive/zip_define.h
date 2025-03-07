@@ -1,5 +1,6 @@
 #pragma once
-
+#include <string>
+#include <vector>
 #include <stdint.h>
 
 constexpr auto SIG_CENTRAL_DIR = 0x02014b50;
@@ -18,7 +19,7 @@ namespace zip {
         DataDescriptor = 0x08074b50
     };
 
-    enum class CompressMethod : uint16_t {
+    enum class ZipMethod : uint16_t {
         Store = 0x00,
         Shrunk = 0x01,
         Factor1 = 0x02,
@@ -59,21 +60,18 @@ namespace zip {
         uint16_t value;
     };
 
-#pragma pack(push, 1)
-
     struct LocalFileHeader {
         Signature signature;
         ZipVersion unzip_version;
         uint16_t bitflags;
-        CompressMethod compress_method;
+        ZipMethod zip_method;
         ZipTime modify_time;
         ZipDate modify_date;
         uint32_t crc32;
-        uint32_t compressed_size;
+        uint32_t zipped_size;
         uint32_t origin_size;
         uint16_t filename_len;
         uint16_t extension_len;
-        // uint8_t string[0];
     };
 
     struct CentralDirectoryRecord {
@@ -81,11 +79,11 @@ namespace zip {
         ZipVersion zip_version;
         ZipVersion unzip_version;
         uint16_t bitflags;
-        CompressMethod compress_method;
+        ZipMethod compress_method;
         ZipTime modify_time;
         ZipDate modify_date;
         uint32_t crc32;
-        uint32_t compressed_size;
+        uint32_t zipped_size;
         uint32_t origin_size;
         uint16_t filename_len;
         uint16_t extension_len;
@@ -94,7 +92,6 @@ namespace zip {
         uint16_t internal_props;
         uint16_t external_props;
         uint16_t offset_at;
-        // uint8_t string[0];
     };
 
     struct EndOfCentralDirectoryRecord {
@@ -106,7 +103,6 @@ namespace zip {
         uint32_t central_size;
         uint32_t offset_at;
         uint16_t commit_len;
-        // uint8_t string[0];
     };
 
     struct LocalFileDescriptor {
@@ -115,5 +111,24 @@ namespace zip {
         uint32_t compressed_size;
         uint32_t origin_size;
     };
-#pragma pack(pop)
+
+    struct StoreFile {
+        LocalFileHeader header;
+        LocalFileDescriptor desc;
+        std::string filename;
+        std::string extension;
+        std::vector<uint8_t> data;
+    };
+
+    struct StoreDirectory {
+        CentralDirectoryRecord header;
+        std::string filename;
+        std::string extension;
+        std::string description;
+    };
+
+    struct StoreEndDirectory {
+        EndOfCentralDirectoryRecord header;
+    };
+    
 }
