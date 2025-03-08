@@ -1,7 +1,7 @@
 #pragma once
+#include <stdint.h>
 #include <string>
 #include <vector>
-#include <stdint.h>
 
 constexpr auto SIG_CENTRAL_DIR = 0x02014b50;
 constexpr auto SIG_END_CENTRAL_DIR = 0x06054b50;
@@ -12,6 +12,11 @@ constexpr auto METHOD_DEFLATE = 0x08;
 
 namespace zip {
 
+    enum class ZipError {
+        Success,
+        InvalidSize
+    };
+
     enum class Signature : uint32_t {
         CentralDirectory = 0x02014b50,
         EndOfCentralDirectory = 0x06054b50,
@@ -19,7 +24,7 @@ namespace zip {
         DataDescriptor = 0x08074b50
     };
 
-    enum class ZipMethod : uint16_t {
+    enum class CompressionMethod : uint16_t {
         Store = 0x00,
         Shrunk = 0x01,
         Factor1 = 0x02,
@@ -31,8 +36,18 @@ namespace zip {
         Deflate = 0x08,
         Deflate64 = 0x09,
         Pkware = 0x0A,
-        Reserved1 = 0x0B,
-        Bzip2 = 0x0C
+        Bzip2 = 0x0C,
+        LZMA = 0x0E,
+        CMPSC = 0x10,
+        IBMTERSE = 0x12,
+        LZ77 = 0x13,
+        ZSTD = 0x5D,
+        MP3 = 0x5E,
+        XZ = 0x5f,
+        JPEG = 0x60,
+        WavPack = 0x61,
+        PPMd = 0x62,
+        AE_x = 0x63
     };
 
     enum class ZipVersion : uint16_t {
@@ -50,7 +65,6 @@ namespace zip {
         uint16_t value;
     };
 
-
     union ZipTime {
         struct {
             int8_t half_second : 5;
@@ -60,49 +74,66 @@ namespace zip {
         uint16_t value;
     };
 
-    struct LocalFileHeader {
-        Signature signature;
-        ZipVersion unzip_version;
-        uint16_t bitflags;
-        ZipMethod zip_method;
-        ZipTime modify_time;
-        ZipDate modify_date;
-        uint32_t crc32;
-        uint32_t zipped_size;
-        uint32_t origin_size;
-        uint16_t filename_len;
-        uint16_t extension_len;
+    union GeneralPurposeBitFlags {
+        struct {
+            bool encrypted : 1;
+            uint8_t compression_options : 2;
+            bool crc_and_sizes_in_cd_and_data_descriptor : 1;
+            bool enhanced_deflating : 1;
+            bool patched_data : 1;
+            bool strong_encryption : 1;
+            uint8_t unused : 4;
+            bool utf8 : 1;
+            bool reserved_0 : 1;
+            bool central_directory_encrypted : 1;
+            bool reserved_1 : 2;
+        };
+        uint16_t value;
     };
 
-    struct CentralDirectoryRecord {
+    struct LocalFileHeader {
         Signature signature;
-        ZipVersion zip_version;
-        ZipVersion unzip_version;
-        uint16_t bitflags;
-        ZipMethod compress_method;
+        ZipVersion version;
+        GeneralPurposeBitFlags bitflags;
+        CompressionMethod compression_method;
         ZipTime modify_time;
         ZipDate modify_date;
         uint32_t crc32;
-        uint32_t zipped_size;
-        uint32_t origin_size;
-        uint16_t filename_len;
-        uint16_t extension_len;
-        uint16_t commit_len;
-        uint16_t disk_index;
-        uint16_t internal_props;
-        uint16_t external_props;
-        uint16_t offset_at;
+        uint32_t compressed_size;
+        uint32_t uncompressed_size;
+        uint16_t filename_length;
+        uint16_t extension_length;
+    };
+
+    struct CentralDirectoryFileHeader {
+        Signature signature;
+        ZipVersion version_made;
+        ZipVersion version_extract;
+        GeneralPurposeBitFlags bitflags;
+        CompressionMethod compression_method;
+        ZipTime modify_time;
+        ZipDate modify_date;
+        uint32_t crc32;
+        uint32_t compressed_size;
+        uint32_t uncompressed_size;
+        uint16_t filename_length;
+        uint16_t extension_length;
+        uint16_t commit_length;
+        uint16_t disk_number;
+        uint16_t internal_attributes;
+        uint16_t external_attributes;
+        uint16_t file_offset;
     };
 
     struct EndOfCentralDirectoryRecord {
         Signature signature;
-        uint16_t current_disk_index;
-        uint16_t central_disk_index;
-        uint16_t central_entries_disk_index;
-        uint16_t central_entries_count;
-        uint32_t central_size;
-        uint32_t offset_at;
-        uint16_t commit_len;
+        uint16_t disk_number;
+        uint16_t directory_disk_number;
+        uint16_t directory_entries;
+        uint16_t directory_total_entires;
+        uint32_t directory_size;
+        uint32_t directory_offset;
+        uint16_t commit_length;
     };
 
     struct LocalFileDescriptor {
@@ -112,7 +143,7 @@ namespace zip {
         uint32_t origin_size;
     };
 
-    struct StoreFile {
+    struct MemoryFile {
         LocalFileHeader header;
         LocalFileDescriptor desc;
         std::string filename;
@@ -120,15 +151,17 @@ namespace zip {
         std::vector<uint8_t> data;
     };
 
-    struct StoreDirectory {
-        CentralDirectoryRecord header;
+    struct MemoryDirectory {
+        CentralDirectoryFileHeader header;
         std::string filename;
         std::string extension;
         std::string description;
+
+        MemoryFile file;
     };
 
-    struct StoreEndDirectory {
+    struct MemoryEndDirectory {
         EndOfCentralDirectoryRecord header;
     };
-    
+
 }
