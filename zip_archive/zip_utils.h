@@ -8,7 +8,7 @@ namespace zip {
     public:
         using iterator = std::vector<T>::const_iterator;
 
-        vector_snippet(iterator begin, iterator end, size_t size) : _begin(begin), _pos(begin), _end(end), _size(size) {
+        vector_snap(iterator begin, iterator end, size_t size) : _begin(begin), _pos(begin), _end(end), _size(size) {
         }
 
     private:

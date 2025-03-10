@@ -144,6 +144,7 @@ namespace zip {
     };
 
     struct MemoryFile {
+        CentralDirectoryFileHeader header;
         LocalFileHeader header;
         LocalFileDescriptor desc;
         std::string filename;
